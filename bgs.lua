@@ -510,6 +510,31 @@ local function estaBauDisponivel(chestModel, nomeIlha)
     return dadosDisponivel
 end
 
+local function obterPadEBau(chestModel, nomeIlha)
+    local padPart = nil
+    local chestPart = chestModel:FindFirstChild("Chest")
+
+    for _, child in ipairs(chestModel:GetChildren()) do
+        if child:IsA("Model") and string.find(child.Name, "Chest Collect") then
+            padPart = child:FindFirstChild("Root") or child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
+            if padPart then break end
+        end
+    end
+
+    if not padPart then
+        local actModel = Workspace:FindFirstChild("Activations") and Workspace.Activations:FindFirstChild("Chest Collect " .. nomeIlha)
+        if actModel then
+            padPart = actModel:FindFirstChild("Root") or actModel.PrimaryPart or actModel:FindFirstChildWhichIsA("BasePart")
+        end
+    end
+
+    if not padPart then
+        padPart = chestModel:FindFirstChild("Root", true) or chestModel:FindFirstChild("Particles") or chestPart
+    end
+
+    return padPart or chestPart, chestPart or padPart
+end
+
 local function coletarBausRapidoComSweep()
     if acaoEspecialAtiva then return end
     acaoEspecialAtiva = true
@@ -527,11 +552,12 @@ local function coletarBausRapidoComSweep()
             if obj.Name == "Chest" and obj:IsA("Model") then
                 local nomeIlha = obj.Parent and obj.Parent.Name or "Ilha"
                 if estaBauDisponivel(obj, nomeIlha) then
-                    local rootPart = obj:FindFirstChild("Root", true) or obj:FindFirstChild("Chest") or obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
-                    if rootPart and rootPart:IsA("BasePart") then
+                    local padPart, chestPart = obterPadEBau(obj, nomeIlha)
+                    if padPart and padPart:IsA("BasePart") then
                         table.insert(listaBaus, {
                             Nome = nomeIlha,
-                            Part = rootPart,
+                            Pad = padPart,
+                            Chest = chestPart,
                             Model = obj
                         })
                     end
@@ -560,26 +586,37 @@ local function coletarBausRapidoComSweep()
     for i = 1, total do
         if sessao.Limpar then break end
         local bInfo = listaBaus[i]
+        local padPart = bInfo.Pad
+        local chestPart = bInfo.Chest
 
-        local posBase = bInfo.Part.Position
-        local posAlvo = posBase + Vector3.new(0, 3, 0)
-        hrp.CFrame = CFrame.new(posAlvo)
-        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        local posPadEmCima = padPart.Position + Vector3.new(0, 3.2, 0)
+        local posPadCentro = padPart.Position
+        local posDentroBau = (chestPart and chestPart.Position) or posPadCentro
 
-        -- Andar fisicamente sobre o bau para acionar colisões físicas e .Touched
-        pcall(function()
-            hum:MoveTo(posBase + Vector3.new(2, 0, 0))
-        end)
+        -- Alternância de múltiplos micro-teleportes (em cima da placa, dentro da placa, dentro do baú)
+        for step = 1, 6 do
+            if step % 3 == 1 then
+                hrp.CFrame = CFrame.new(posPadEmCima)
+            elseif step % 3 == 2 then
+                hrp.CFrame = CFrame.new(posPadCentro)
+            else
+                hrp.CFrame = CFrame.new(posDentroBau)
+            end
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
 
-        for step = 1, 4 do
             if typeof(firetouchinterest) == "function" then
                 pcall(function()
-                    firetouchinterest(hrp, bInfo.Part, 0)
-                    task.wait(0.03)
-                    firetouchinterest(hrp, bInfo.Part, 1)
+                    firetouchinterest(hrp, padPart, 0)
+                    task.wait(0.015)
+                    firetouchinterest(hrp, padPart, 1)
+                    if chestPart and chestPart ~= padPart then
+                        firetouchinterest(hrp, chestPart, 0)
+                        task.wait(0.015)
+                        firetouchinterest(hrp, chestPart, 1)
+                    end
                 end)
                 for _, d in ipairs(bInfo.Model:GetDescendants()) do
-                    if d:IsA("BasePart") then
+                    if d:IsA("BasePart") and (d.Name == "Root" or d.Name == "Chest" or d.Name == "Particles") then
                         pcall(function()
                             firetouchinterest(hrp, d, 0)
                             task.wait()
@@ -607,17 +644,7 @@ local function coletarBausRapidoComSweep()
                 end
             end)
 
-            if step == 2 then
-                pcall(function()
-                    hum:MoveTo(posBase + Vector3.new(-2, 0, 0))
-                end)
-            elseif step == 3 then
-                pcall(function()
-                    hum:MoveTo(posBase)
-                end)
-            end
-
-            task.wait(0.08)
+            task.wait(0.06)
         end
 
         task.wait(0.05)
