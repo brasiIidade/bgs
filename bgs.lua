@@ -97,12 +97,93 @@ local totensMundos = {
 }
 
 local listaOvosPredefinidos = {
-    "Common Egg", "Spotted Egg", "Alien Egg", "Inferno Egg",
-    "Ice Egg", "Lava Egg", "Magma Egg", "Mythic Egg", "Crystal Egg",
-    "Cloud Egg", "Demon Egg", "Heavenly Egg", "Nightmare Egg",
-    "Underworld Egg", "Toy Egg", "Candy Egg", "Beach Egg", "Ocean Egg",
-    "Atlantis Egg", "Rainbow Egg", "Space Egg"
+    "100K Egg", "1B Egg", "2020 Egg", "300m Egg", "400m Egg", "500m Egg",
+    "50th Update Egg", "600m Egg", "700M Egg", "800M Egg", "900M Egg",
+    "Alien Egg", "Ancient Egg", "Angelic Egg", "Autumn Egg", "Balloon Egg",
+    "Basket Egg", "Beach Egg", "Bee Egg", "Beta Egg", "Blazing Egg",
+    "Block Egg", "Blossom Egg", "Bunny Egg", "Candy Egg", "Candycane Egg",
+    "Candycorn Egg", "Cannon Egg", "Chocolate Egg", "Christmas Egg",
+    "Clockwork Egg", "Clover Egg", "Clown Egg", "Coconut Egg", "Colorful Egg",
+    "Common Egg", "Coral Egg", "Core Egg", "Corrupted Egg", "Cosmic Egg",
+    "Costume Egg", "Crab Egg", "Cracked Egg", "Crystal Egg", "Dark Egg",
+    "Dark Serpent Egg", "Darkness Egg", "Default Egg", "Demoncore Egg",
+    "Demonic Egg", "Dominus Egg", "Earth Egg", "Easter Egg", "Eastery Egg",
+    "Egg O' Gold", "Electra Hydra Egg", "Element Egg", "Elemental Egg",
+    "Enraged Egg", "Evil Egg", "Exotic Egg", "Fancy Egg", "Festive Egg",
+    "Fire Egg", "Flower Egg", "Fortune Egg", "Free Pet Egg", "Free Pet Egg2",
+    "Frost Egg", "Frostbite Egg", "Frosted Egg", "Frosty Egg", "Fruity Egg",
+    "Ghost Egg", "Gift Egg", "Globe Egg", "Golden Egg", "Golf Egg",
+    "Guardian Egg", "Gummy Egg", "Halloween Egg", "Halo Egg", "Heartful Egg",
+    "Heaven Egg", "Heavenly Egg", "Hell Egg", "Hellish Egg", "Hot Cocoa Egg",
+    "Hydra Egg", "Ice Cream Egg", "Ice Shard Egg", "Inferno Egg",
+    "Infernus Egg", "Jackpot Egg", "Jelly Egg", "July 4th Egg", "Kelp Egg",
+    "Leaf Egg", "Leprechaun Egg", "Lovely Egg", "Lovesick Egg", "Luck'O Egg",
+    "Lucky Egg", "Lunar Egg", "Magic Egg", "Magma Egg", "Mossy Egg",
+    "Mushroom Egg", "Mutant Egg", "Mythical Egg", "New Year Egg",
+    "Nightmare Egg", "Obsidian Egg", "Ocean Egg", "Orange Egg", "Painted Egg",
+    "Pastel Egg", "Popcorn Egg", "Pumpkin Egg", "Rainbow Egg", "Red Egg",
+    "Royalty Egg", "Rubber Egg", "Sand Egg", "Shadow Egg", "Shamrock Egg",
+    "Sinister Egg", "Skelly Egg", "Slime Egg", "Slushy Egg", "Snowman Egg",
+    "Space Crystal Egg", "Sparkly Egg", "Spikey Egg", "Spirit Egg",
+    "Split Egg", "Spotted Egg", "St.Patricks Egg", "Stone Egg", "Stuffed Egg",
+    "Sugar Egg", "Summer Egg", "Tier3", "Tormentor Egg", "Toxic Egg",
+    "Toy Egg", "Tree Egg", "Twilight Egg", "Twitch Egg", "Twitch Egg2",
+    "Twitter Egg", "Urchin Egg", "Vacation Egg", "Valentine Egg",
+    "Valentine's 2020 Egg", "Vine Egg", "Void Shard Egg", "Water Egg",
+    "Wind-up Egg", "Wisp Egg", "Wispful Egg"
 }
+
+local function obterListaOvosCompleta()
+    local set = {}
+    local lista = {}
+
+    local function adicionar(n)
+        if n and n ~= "" and not set[n] and not string.find(n, "Coming Soon") and not string.find(n, "Test") and not string.find(n, "Crate") then
+            set[n] = true
+            table.insert(lista, n)
+        end
+    end
+
+    for _, v in ipairs(listaOvosPredefinidos) do
+        adicionar(v)
+    end
+
+    pcall(function()
+        local wsEggs = Workspace:FindFirstChild("Eggs")
+        if wsEggs then
+            for _, v in ipairs(wsEggs:GetChildren()) do
+                adicionar(v.Name)
+            end
+        end
+    end)
+
+    pcall(function()
+        local floating = Workspace:FindFirstChild("FloatingIslands")
+        if floating then
+            for _, obj in ipairs(floating:GetDescendants()) do
+                if obj.Name == "Eggs" and obj:IsA("Folder") then
+                    for _, egg in ipairs(obj:GetChildren()) do
+                        adicionar(egg.Name)
+                    end
+                end
+            end
+        end
+    end)
+
+    pcall(function()
+        local rsEggs = ReplicatedStorage:FindFirstChild("Assets") and ReplicatedStorage.Assets:FindFirstChild("Eggs")
+        if rsEggs then
+            for _, v in ipairs(rsEggs:GetChildren()) do
+                adicionar(v.Name)
+            end
+        end
+    end)
+
+    table.sort(lista)
+    return lista
+end
+
+local listaOvosDisponiveis = obterListaOvosCompleta()
 
 local codigosPorCategoria = {
     ["Sorte (2x Luck)"] = {
@@ -673,13 +754,18 @@ local function obterOvoMaisProximo(origem)
 end
 
 local function obterOvoPorNome(nome)
-    if not nome then return nil, nil end
+    if not nome or nome == "" then return nil, nil end
     local function escanear(pasta)
         if not pasta then return nil, nil end
         for _, obj in ipairs(pasta:GetChildren()) do
             if obj.Name == nome then
                 local pp = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
                 if pp then return obj, pp end
+            end
+            local sub = obj:FindFirstChild(nome)
+            if sub then
+                local pp = sub.PrimaryPart or sub:FindFirstChildWhichIsA("BasePart", true)
+                if pp then return sub, pp end
             end
         end
         return nil, nil
@@ -1533,7 +1619,7 @@ FarmTab:Toggle({
 FarmTab:Dropdown({
     Title = "Ovo Alvo",
     Desc = "Ovo selecionado para abertura ou trava",
-    Values = listaOvosPredefinidos,
+    Values = listaOvosDisponiveis,
     Value = "Common Egg",
     Multi = false,
     Callback = function(v)
