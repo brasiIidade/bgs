@@ -1,3 +1,7 @@
+-- ==============================================================================
+-- BUBBLE GUM SIMULATOR - AUTO FARM & SYSTEM SUITE (OPTIMIZED / MOBILE & PC)
+-- ==============================================================================
+
 if _G.CoinHarvesterSession and typeof(_G.CoinHarvesterSession.Unload) == "function" then
     pcall(function()
         _G.CoinHarvesterSession.Unload()
@@ -11,37 +15,39 @@ local sessao = {
 }
 _G.CoinHarvesterSession = sessao
 
+-- ==================== CONFIGURAÇÕES GERAIS ====================
 local ATIVADO = false
 local AUTO_EGG = false
-local TRAVAR_NO_OVO = false
-local OVO_SELECIONADO = "Common Egg"
-local QTD_OVOS = 1
+local SPAM_EGG = false
+local QTD_OVOS = 3
+local DELAY_EGG = 0.15
+
 local AUTO_BUBBLE = true
 local AUTO_REWARDS = true
 local AUTO_CHESTS = true
-local AUTO_WORLD_REWARDS = true
 local AUTO_MEGA_SPIN = true
 local FPS_BOOST = false
 local SKIP_EGG_ANIM = true
-local HUD_ATIVO = true
 local uiInicializada = false
 
-local VELOCIDADE_TWEEN = 160
+-- Configurações de Movimento & Tween
+local VELOCIDADE_TWEEN = 90
 local NOCLIP_ATIVO = true
-local ALTURA_OFFSET = 1.0
-local RAIO_MAXIMO_BUSCA = 500
-local DISTANCIA_MAX_OVO = 30
+local ALTURA_OFFSET = 0.8
+local RAIO_MAXIMO_BUSCA = 400
+local DISTANCIA_MAX_OVO = 40
 local PRIORIZAR_CAIXAS = true
-local TEMPO_COOLDOWN_MOEDA = 4.0
+local TEMPO_COOLDOWN_MOEDA = 3.5
 local FILTRO_MOEDAS = "Tudo"
-local MAGNET_RAIO = 28
+local MAGNET_RAIO = 32
+local TEMPO_PAD_BAU = 0.65
 
+-- ==================== SERVIÇOS ROBLOX ====================
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -51,28 +57,21 @@ local NetworkRemoteEvent = ReplicatedStorage:FindFirstChild("NetworkRemoteEvent"
 local NetworkRemoteFunction = ReplicatedStorage:FindFirstChild("NetworkRemoteFunction")
 local LocalPlayer = Players.LocalPlayer
 
+-- ==================== VARIÁVEIS DE ESTADO ====================
 local historicoRecentes = {}
 local ultimoAlvoInstancia = nil
 local threadPrincipal = nil
 local threadEgg = nil
 local threadBubble = nil
 local threadRewards = nil
-local threadStats = nil
-local threadAntiAfkExtra = nil
+local threadAntiAfk = nil
 local noclipConexao = nil
 local fpsBoostConexao = nil
 local tweenAtual = nil
 local partesPersonagem = {}
 local acaoEspecialAtiva = false
 
-local tempoInicioSessao = os.time()
-local moedasInicio = 0
-local gemasInicio = 0
-local bolhasInicio = 0
-local ovosInicio = 0
-local totalColetadas = 0
-local totalOvosAbertos = 0
-
+-- ==================== LISTAS DE DADOS ====================
 local bausGlobais = {
     "The Floating Island", "The Skylands", "The Void", "XP Island",
     "Gumdrop Island", "Candy Island", "Sweet Island",
@@ -89,101 +88,6 @@ local mundosComprar = {
     "Candy Land", "Toy Land", "Beach World", "Atlantis",
     "Rainbow Land", "Underworld", "Mystic Forest", "Heaven"
 }
-
-local totensMundos = {
-    "Candy Land Rewards", "Toy Land Rewards", "Beach World Rewards",
-    "Atlantis Rewards", "Rainbow Land Rewards", "Underworld Rewards",
-    "Mystic Forest Rewards", "Heaven Rewards"
-}
-
-local listaOvosPredefinidos = {
-    "100K Egg", "1B Egg", "2020 Egg", "300m Egg", "400m Egg", "500m Egg",
-    "50th Update Egg", "600m Egg", "700M Egg", "800M Egg", "900M Egg",
-    "Alien Egg", "Ancient Egg", "Angelic Egg", "Autumn Egg", "Balloon Egg",
-    "Basket Egg", "Beach Egg", "Bee Egg", "Beta Egg", "Blazing Egg",
-    "Block Egg", "Blossom Egg", "Bunny Egg", "Candy Egg", "Candycane Egg",
-    "Candycorn Egg", "Cannon Egg", "Chocolate Egg", "Christmas Egg",
-    "Clockwork Egg", "Clover Egg", "Clown Egg", "Coconut Egg", "Colorful Egg",
-    "Common Egg", "Coral Egg", "Core Egg", "Corrupted Egg", "Cosmic Egg",
-    "Costume Egg", "Crab Egg", "Cracked Egg", "Crystal Egg", "Dark Egg",
-    "Dark Serpent Egg", "Darkness Egg", "Default Egg", "Demoncore Egg",
-    "Demonic Egg", "Dominus Egg", "Earth Egg", "Easter Egg", "Eastery Egg",
-    "Egg O' Gold", "Electra Hydra Egg", "Element Egg", "Elemental Egg",
-    "Enraged Egg", "Evil Egg", "Exotic Egg", "Fancy Egg", "Festive Egg",
-    "Fire Egg", "Flower Egg", "Fortune Egg", "Free Pet Egg", "Free Pet Egg2",
-    "Frost Egg", "Frostbite Egg", "Frosted Egg", "Frosty Egg", "Fruity Egg",
-    "Ghost Egg", "Gift Egg", "Globe Egg", "Golden Egg", "Golf Egg",
-    "Guardian Egg", "Gummy Egg", "Halloween Egg", "Halo Egg", "Heartful Egg",
-    "Heaven Egg", "Heavenly Egg", "Hell Egg", "Hellish Egg", "Hot Cocoa Egg",
-    "Hydra Egg", "Ice Cream Egg", "Ice Shard Egg", "Inferno Egg",
-    "Infernus Egg", "Jackpot Egg", "Jelly Egg", "July 4th Egg", "Kelp Egg",
-    "Leaf Egg", "Leprechaun Egg", "Lovely Egg", "Lovesick Egg", "Luck'O Egg",
-    "Lucky Egg", "Lunar Egg", "Magic Egg", "Magma Egg", "Mossy Egg",
-    "Mushroom Egg", "Mutant Egg", "Mythical Egg", "New Year Egg",
-    "Nightmare Egg", "Obsidian Egg", "Ocean Egg", "Orange Egg", "Painted Egg",
-    "Pastel Egg", "Popcorn Egg", "Pumpkin Egg", "Rainbow Egg", "Red Egg",
-    "Royalty Egg", "Rubber Egg", "Sand Egg", "Shadow Egg", "Shamrock Egg",
-    "Sinister Egg", "Skelly Egg", "Slime Egg", "Slushy Egg", "Snowman Egg",
-    "Space Crystal Egg", "Sparkly Egg", "Spikey Egg", "Spirit Egg",
-    "Split Egg", "Spotted Egg", "St.Patricks Egg", "Stone Egg", "Stuffed Egg",
-    "Sugar Egg", "Summer Egg", "Tier3", "Tormentor Egg", "Toxic Egg",
-    "Toy Egg", "Tree Egg", "Twilight Egg", "Twitch Egg", "Twitch Egg2",
-    "Twitter Egg", "Urchin Egg", "Vacation Egg", "Valentine Egg",
-    "Valentine's 2020 Egg", "Vine Egg", "Void Shard Egg", "Water Egg",
-    "Wind-up Egg", "Wisp Egg", "Wispful Egg"
-}
-
-local function obterListaOvosCompleta()
-    local set = {}
-    local lista = {}
-
-    local function adicionar(n)
-        if n and n ~= "" and not set[n] and not string.find(n, "Coming Soon") and not string.find(n, "Test") and not string.find(n, "Crate") then
-            set[n] = true
-            table.insert(lista, n)
-        end
-    end
-
-    for _, v in ipairs(listaOvosPredefinidos) do
-        adicionar(v)
-    end
-
-    pcall(function()
-        local wsEggs = Workspace:FindFirstChild("Eggs")
-        if wsEggs then
-            for _, v in ipairs(wsEggs:GetChildren()) do
-                adicionar(v.Name)
-            end
-        end
-    end)
-
-    pcall(function()
-        local floating = Workspace:FindFirstChild("FloatingIslands")
-        if floating then
-            for _, obj in ipairs(floating:GetDescendants()) do
-                if obj.Name == "Eggs" and obj:IsA("Folder") then
-                    for _, egg in ipairs(obj:GetChildren()) do
-                        adicionar(egg.Name)
-                    end
-                end
-            end
-        end
-    end)
-
-    pcall(function()
-        local rsEggs = ReplicatedStorage:FindFirstChild("Assets") and ReplicatedStorage.Assets:FindFirstChild("Eggs")
-        if rsEggs then
-            for _, v in ipairs(rsEggs:GetChildren()) do
-                adicionar(v.Name)
-            end
-        end
-    end)
-
-    table.sort(lista)
-    return lista
-end
-
-local listaOvosDisponiveis = obterListaOvosCompleta()
 
 local codigosPorCategoria = {
     ["Sorte (2x Luck)"] = {
@@ -299,144 +203,13 @@ local codigosComDescricao = {
     }
 }
 
-local function formatarNumero(num)
-    if not num or num == 0 then return "0" end
-    local absNum = math.abs(num)
-    if absNum >= 1e12 then
-        return string.format("%.2fT", num / 1e12)
-    elseif absNum >= 1e9 then
-        return string.format("%.2fB", num / 1e9)
-    elseif absNum >= 1e6 then
-        return string.format("%.2fM", num / 1e6)
-    elseif absNum >= 1e3 then
-        return string.format("%.1fK", num / 1e3)
-    else
-        return tostring(math.floor(num))
-    end
-end
-
-local function obterValorStat(nomeStat, indiceFallback)
-    local val = 0
-    pcall(function()
-        local ls = LocalPlayer:FindFirstChild("leaderstats")
-        if ls and ls:FindFirstChild(nomeStat) then
-            val = ls[nomeStat].Value
-        end
-    end)
-    if val == 0 and indiceFallback then
-        pcall(function()
-            local servicesMod = require(ReplicatedStorage.Assets.Modules.Services)
-            local network = servicesMod:GetService("Network")
-            if network then
-                local res = network:Call("GetClientData", indiceFallback)
-                if typeof(res) == "number" then
-                    val = res
-                end
-            end
-        end)
-    end
-    return val
-end
-
-local function capturarStatsIniciais()
-    moedasInicio = obterValorStat("Coins", 1)
-    gemasInicio = obterValorStat("Gems", 4)
-    bolhasInicio = obterValorStat("Bubbles Blown", 7)
-    ovosInicio = obterValorStat("Eggs Opened", 22)
-end
-
-local hudRefs = nil
-
-local function criarHUDStats()
-    if hudRefs and hudRefs.Gui and hudRefs.Gui.Parent then
-        pcall(function() hudRefs.Gui:Destroy() end)
-    end
-
-    local parentGui = (typeof(gethui) == "function" and gethui()) or CoreGui
-    local sg = Instance.new("ScreenGui")
-    sg.Name = "BGS_StatsHUD"
-    sg.ResetOnSpawn = false
-    pcall(function() sg.Parent = parentGui end)
-
-    local frame = Instance.new("Frame")
-    frame.Name = "MainFrame"
-    frame.Size = UDim2.new(0, 230, 0, 140)
-    frame.Position = UDim2.new(0, 16, 0.5, -70)
-    frame.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
-    frame.BorderSizePixel = 0
-    frame.Active = true
-    frame.Draggable = true
-    frame.Visible = HUD_ATIVO
-    frame.Parent = sg
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = frame
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(45, 55, 72)
-    stroke.Thickness = 1.2
-    stroke.Parent = frame
-
-    local header = Instance.new("TextLabel")
-    header.Size = UDim2.new(1, -20, 0, 22)
-    header.Position = UDim2.new(0, 10, 0, 6)
-    header.BackgroundTransparency = 1
-    header.Text = "Sessao Atual"
-    header.TextColor3 = Color3.fromRGB(240, 240, 240)
-    header.TextSize = 12
-    header.Font = Enum.Font.GothamBold
-    header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Parent = frame
-
-    local statsContainer = Instance.new("Frame")
-    statsContainer.Size = UDim2.new(1, -20, 1, -34)
-    statsContainer.Position = UDim2.new(0, 10, 0, 30)
-    statsContainer.BackgroundTransparency = 1
-    statsContainer.Parent = frame
-
-    local layout = Instance.new("UIListLayout")
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 2)
-    layout.Parent = statsContainer
-
-    local function criarLinha(ordem, textoPadrao)
-        local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(1, 0, 0, 16)
-        lbl.BackgroundTransparency = 1
-        lbl.Text = textoPadrao
-        lbl.TextColor3 = Color3.fromRGB(175, 185, 200)
-        lbl.TextSize = 11
-        lbl.Font = Enum.Font.GothamMedium
-        lbl.TextXAlignment = Enum.TextXAlignment.Left
-        lbl.LayoutOrder = ordem
-        lbl.Parent = statsContainer
-        return lbl
-    end
-
-    local lblTempo = criarLinha(1, "Tempo: 00:00:00")
-    local lblMoedas = criarLinha(2, "Moedas: +0 (+0/min)")
-    local lblGemas = criarLinha(3, "Gemas: +0")
-    local lblBolhas = criarLinha(4, "Bolhas: +0")
-    local lblOvos = criarLinha(5, "Ovos: +0")
-
-    hudRefs = {
-        Gui = sg,
-        Frame = frame,
-        Tempo = lblTempo,
-        Moedas = lblMoedas,
-        Gemas = lblGemas,
-        Bolhas = lblBolhas,
-        Ovos = lblOvos
-    }
-end
-
+-- ==================== INTERFACE WINDUI ====================
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
 local Window = WindUI:CreateWindow({
     Title = "Bubble Gum Simulator",
     Icon = "circle-dot",
-    Author = "by h64",
+    Author = "by h64 (Mobile & PC)",
     Folder = "BGS_h64",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
@@ -454,12 +227,14 @@ local function notificar(texto, duracao)
     end)
 end
 
-local FarmTab = Window:Tab({ Title = "Farm & Ovos", Icon = "boxes" })
+-- Abas do Menu
+local FarmTab = Window:Tab({ Title = "Auto Farm", Icon = "sparkles" })
+local EggTab = Window:Tab({ Title = "Ovos", Icon = "boxes" })
 local RewardsTab = Window:Tab({ Title = "Recompensas", Icon = "gift" })
 local WorldsTab = Window:Tab({ Title = "Mundos", Icon = "map-pin" })
-local StatsTab = Window:Tab({ Title = "Estatisticas", Icon = "activity" })
-local ConfigTab = Window:Tab({ Title = "Configuracoes", Icon = "sliders-horizontal" })
+local ConfigTab = Window:Tab({ Title = "Configurações", Icon = "sliders-horizontal" })
 
+-- ==================== GERENCIAMENTO DO PERSONAGEM ====================
 local function atualizarPartesPersonagem()
     table.clear(partesPersonagem)
     local char = LocalPlayer.Character
@@ -471,13 +246,6 @@ local function atualizarPartesPersonagem()
         end
     end
 end
-
-local charAddedConexao = LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.5)
-    atualizarPartesPersonagem()
-    gerenciarNoclip(ATIVADO and NOCLIP_ATIVO)
-end)
-table.insert(sessao.Conexoes, charAddedConexao)
 
 local function obterPersonagem()
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -515,6 +283,14 @@ local function gerenciarNoclip(ativar)
     end
 end
 
+local charAddedConexao = LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    atualizarPartesPersonagem()
+    gerenciarNoclip(ATIVADO and NOCLIP_ATIVO)
+end)
+table.insert(sessao.Conexoes, charAddedConexao)
+
+-- ==================== FPS BOOST ====================
 local function aplicarFPSBoost(ativar)
     if ativar then
         pcall(function()
@@ -562,6 +338,7 @@ local function aplicarFPSBoost(ativar)
     end
 end
 
+-- ==================== LÓGICA DE COLETAS & MAGNET ====================
 local function obterPosicaoEPart(obj)
     if not obj or not obj.Parent then return nil, nil end
     if obj:IsA("BasePart") then
@@ -581,15 +358,15 @@ local function calcularValorRapido(obj)
     if nome == "Model" then
         local p = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
         if p and p.Size.Magnitude > 4 then
-            return 8
+            return 3.5
         end
         return 1
     end
     local nomeMin = string.lower(nome)
     if string.find(nomeMin, "box") or string.find(nomeMin, "crate") or string.find(nomeMin, "chest") then
-        return 10
+        return 4.0
     elseif string.find(nomeMin, "stack") or string.find(nomeMin, "pile") then
-        return 4
+        return 2.0
     end
     return 1
 end
@@ -611,7 +388,7 @@ local function passaFiltroTipo(obj)
 end
 
 local function tentarTocar(hrp, part)
-    if not part or not part.Parent then return end
+    if not hrp or not part or not part.Parent then return end
     if typeof(firetouchinterest) == "function" then
         pcall(function()
             firetouchinterest(hrp, part, 0)
@@ -626,7 +403,13 @@ local function aspirarMoedasProximas(hrp)
     if not pickups or not hrp then return end
     local posChar = hrp.Position
     for _, item in ipairs(pickups:GetChildren()) do
-        local pos, part = obterPosicaoEPart(item)
+        local pos, part = nil, nil
+        if item:IsA("BasePart") then
+            pos, part = item.Position, item
+        elseif item:IsA("Model") then
+            local pp = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+            if pp then pos, part = pp.Position, pp end
+        end
         if pos and (pos - posChar).Magnitude <= MAGNET_RAIO then
             tentarTocar(hrp, part)
         end
@@ -660,7 +443,7 @@ local function buscarMelhorAlvo(origem)
 
                 if dist <= RAIO_MAXIMO_BUSCA then
                     local val = calcularValorRapido(item)
-                    local score = (val * 15) / (dist + 3)
+                    local score = (val * 40) / (dist + 8)
 
                     if score > maiorScore then
                         maiorScore = score
@@ -691,7 +474,7 @@ local function buscarMelhorAlvo(origem)
 
                     if dist <= RAIO_MAXIMO_BUSCA then
                         local val = calcularValorRapido(item)
-                        local score = (val * 15) / (dist + 3)
+                        local score = (val * 40) / (dist + 8)
 
                         if score > maiorScore then
                             maiorScore = score
@@ -711,6 +494,568 @@ local function buscarMelhorAlvo(origem)
     return melhorAlvo
 end
 
+-- ==================== TWEEN SUAVE DE MOEDAS ====================
+local function tweenAteMoeda(alvoInfo)
+    local char, hrp, hum = obterPersonagem()
+    if not char or not hrp or not hum then return false end
+
+    local destino = alvoInfo.Posicao + Vector3.new(0, ALTURA_OFFSET, 0)
+    local item = alvoInfo.Instancia
+    local part = alvoInfo.Part
+
+    ultimoAlvoInstancia = item
+    historicoRecentes[item] = os.clock() + TEMPO_COOLDOWN_MOEDA
+
+    local dist = (hrp.Position - destino).Magnitude
+    if dist < 1.5 then
+        tentarTocar(hrp, part)
+        aspirarMoedasProximas(hrp)
+        return true
+    end
+
+    local duracao = math.max(dist / math.max(VELOCIDADE_TWEEN, 20), 0.04)
+    local tweenInfo = TweenInfo.new(duracao, Enum.EasingStyle.Linear)
+    local cframeAlvo = CFrame.new(destino, destino + hrp.CFrame.LookVector)
+
+    if tweenAtual then
+        pcall(function() tweenAtual:Cancel() end)
+        tweenAtual = nil
+    end
+
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    tweenAtual = TweenService:Create(hrp, tweenInfo, {CFrame = cframeAlvo})
+    tweenAtual:Play()
+
+    local inicio = os.clock()
+    local ultimoMagnet = 0
+
+    while ATIVADO and not sessao.Limpar and not acaoEspecialAtiva and (os.clock() - inicio < duracao + 0.05) do
+        if not item or not item.Parent then
+            tentarTocar(hrp, part)
+            aspirarMoedasProximas(hrp)
+            if tweenAtual then
+                pcall(function() tweenAtual:Cancel() end)
+                tweenAtual = nil
+            end
+            return true
+        end
+
+        local agora = os.clock()
+        if agora - ultimoMagnet > 0.05 then
+            ultimoMagnet = agora
+            aspirarMoedasProximas(hrp)
+        end
+
+        local distAtual = (hrp.Position - destino).Magnitude
+        if distAtual <= 3.2 then
+            tentarTocar(hrp, part)
+            if not item.Parent or distAtual <= 1.2 then
+                if tweenAtual then
+                    pcall(function() tweenAtual:Cancel() end)
+                    tweenAtual = nil
+                end
+                aspirarMoedasProximas(hrp)
+                return true
+            end
+        end
+
+        task.wait(0.015)
+    end
+
+    tentarTocar(hrp, part)
+    aspirarMoedasProximas(hrp)
+    return true
+end
+
+-- ==================== SERVIÇO DE MUNDOS & ANTI-VOID ====================
+local plataformaSegura = nil
+
+local function criarOuMoverPlataformaSegura(posicao)
+    if not posicao then return end
+    pcall(function()
+        if not plataformaSegura or not plataformaSegura.Parent then
+            plataformaSegura = Instance.new("Part")
+            plataformaSegura.Name = "BGS_SafePlatform"
+            plataformaSegura.Size = Vector3.new(35, 2, 35)
+            plataformaSegura.Anchored = true
+            plataformaSegura.CanCollide = true
+            plataformaSegura.Transparency = 1
+            plataformaSegura.Material = Enum.Material.SmoothPlastic
+            plataformaSegura.Parent = Workspace
+        end
+        plataformaSegura.CFrame = CFrame.new(posicao - Vector3.new(0, 3.2, 0))
+    end)
+end
+
+local function removerPlataformaSegura()
+    if plataformaSegura and plataformaSegura.Parent then
+        pcall(function() plataformaSegura:Destroy() end)
+        plataformaSegura = nil
+    end
+end
+
+local function obterWorldService()
+    local ws = nil
+    pcall(function()
+        local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if pg and pg:FindFirstChild("ScreenGui") and pg.ScreenGui:FindFirstChild("ClientScript") and pg.ScreenGui.ClientScript:FindFirstChild("Modules") then
+            local mod = pg.ScreenGui.ClientScript.Modules:FindFirstChild("WorldService")
+            if mod then
+                ws = require(mod)
+            end
+        end
+    end)
+    if not ws then
+        pcall(function()
+            local servicesMod = require(ReplicatedStorage.Assets.Modules.Services)
+            ws = servicesMod:GetService("WorldService")
+        end)
+    end
+    return ws
+end
+
+local function viajarParaMundo(nomeMundo)
+    if not nomeMundo then return end
+
+    if tweenAtual then
+        pcall(function() tweenAtual:Cancel() end)
+        tweenAtual = nil
+    end
+
+    local char, hrp, hum = obterPersonagem()
+    if hrp then
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        criarOuMoverPlataformaSegura(hrp.Position)
+    end
+    gerenciarNoclip(true)
+
+    pcall(function()
+        if NetworkRemoteFunction then
+            NetworkRemoteFunction:InvokeServer("BuyWorld", nomeMundo)
+        end
+        if NetworkRemoteEvent then
+            NetworkRemoteEvent:FireServer("BuyWorld", nomeMundo)
+        end
+    end)
+
+    local ws = obterWorldService()
+    local trocouPeloService = false
+    if ws and typeof(ws.SetWorld) == "function" then
+        pcall(function()
+            ws:SetWorld(nomeMundo)
+            trocouPeloService = true
+        end)
+    end
+
+    if not trocouPeloService or (ws and typeof(ws.GetCurrentWorld) == "function" and ws:GetCurrentWorld() ~= nomeMundo) then
+        pcall(function()
+            if NetworkRemoteFunction then
+                task.spawn(function()
+                    NetworkRemoteFunction:InvokeServer("Teleport", nomeMundo .. "Spawn")
+                end)
+            end
+            if NetworkRemoteEvent then
+                NetworkRemoteEvent:FireServer("Teleport", nomeMundo .. "Spawn")
+            end
+        end)
+    end
+
+    task.wait(0.4)
+    local c, h, hm = obterPersonagem()
+    if h then
+        h.AssemblyLinearVelocity = Vector3.zero
+        criarOuMoverPlataformaSegura(h.Position)
+    end
+
+    task.delay(1.0, function()
+        local c2, h2, hm2 = obterPersonagem()
+        if h2 then
+            h2.AssemblyLinearVelocity = Vector3.zero
+        end
+        gerenciarNoclip(ATIVADO and NOCLIP_ATIVO)
+    end)
+
+    notificar("Viajando para: " .. tostring(nomeMundo), 2)
+end
+
+-- ==================== COLETA PRECISA DE BAÚS (VIA TWEEN NO PAD) ====================
+local function estaBauDisponivel(chestModel, nomeIlha)
+    if not chestModel or not chestModel.Parent then return false end
+
+    local regenGui = chestModel:FindFirstChild("Regen") or chestModel:FindFirstChildWhichIsA("BillboardGui", true)
+    if regenGui and (regenGui:IsA("SurfaceGui") or regenGui:IsA("BillboardGui")) then
+        if regenGui.Enabled == true then
+            return false
+        end
+    end
+
+    local chestPart = chestModel:FindFirstChild("Chest")
+    if chestPart and chestPart:IsA("BasePart") then
+        if chestPart.Transparency >= 0.8 then
+            return false
+        end
+    end
+
+    local dadosDisponivel = true
+    pcall(function()
+        local servicesMod = require(ReplicatedStorage.Assets.Modules.Services)
+        local network = servicesMod:GetService("Network")
+        local library = servicesMod:GetService("Library")
+        local idx = library("index")
+        if network and idx and idx.CHEST_REGEN_TIMES then
+            local regenTimes = network:Call("GetClientData", idx.CHEST_REGEN_TIMES)
+            if type(regenTimes) == "table" then
+                local serverTime = os.time()
+                local chestScript = ReplicatedStorage.Assets.Modules:FindFirstChild("ChestLayerService")
+                if chestScript and chestScript:FindFirstChild("ServerTime") then
+                    serverTime = chestScript.ServerTime.Value
+                end
+
+                for _, entry in ipairs(regenTimes) do
+                    if entry[1] == nomeIlha then
+                        local expireTime = entry[2]
+                        if expireTime and (expireTime - serverTime) > 0 then
+                            dadosDisponivel = false
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    end)
+
+    return dadosDisponivel
+end
+
+local function estaBauColetadoOuInvisivel(bInfo)
+    local chestModel = bInfo.Model
+    local chestPart = bInfo.Chest
+
+    if not chestModel or not chestModel.Parent then return true end
+
+    -- Se o Chest principal sumiu ou ficou invisível
+    if chestPart and chestPart:IsA("BasePart") and chestPart.Transparency >= 0.8 then
+        return true
+    end
+
+    -- Se o GUI de Regen foi ativado
+    local regenGui = chestModel:FindFirstChild("Regen") or chestModel:FindFirstChildWhichIsA("BillboardGui", true)
+    if regenGui and (regenGui:IsA("SurfaceGui") or regenGui:IsA("BillboardGui")) then
+        if regenGui.Enabled == true then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function obterPadEBau(chestModel, nomeIlha)
+    local padPart = nil
+    local chestPart = chestModel:FindFirstChild("Chest")
+
+    for _, child in ipairs(chestModel:GetChildren()) do
+        if child:IsA("Model") and string.find(child.Name, "Chest Collect") then
+            padPart = child:FindFirstChild("Root") or child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
+            if padPart then break end
+        end
+    end
+
+    if not padPart then
+        local actModel = Workspace:FindFirstChild("Activations") and Workspace.Activations:FindFirstChild("Chest Collect " .. nomeIlha)
+        if actModel then
+            padPart = actModel:FindFirstChild("Root") or actModel.PrimaryPart or actModel:FindFirstChildWhichIsA("BasePart")
+        end
+    end
+
+    if not padPart then
+        padPart = chestModel:FindFirstChild("Root", true) or chestModel:FindFirstChild("Particles") or chestPart
+    end
+
+    return padPart or chestPart, chestPart or padPart
+end
+
+local function coletarBauNoPad(bInfo, char, hrp, hum)
+    local padPart = bInfo.Pad
+    local chestPart = bInfo.Chest
+    local chestModel = bInfo.Model
+    local nomeIlha = bInfo.Nome
+
+    if not padPart or not hrp or not hum then return end
+
+    local basePos = padPart.Position
+    local posTopoPad = basePos + Vector3.new(0, 2.6, 0)
+
+    -- Cancela tween de moedas caso ativo
+    if tweenAtual then
+        pcall(function() tweenAtual:Cancel() end)
+        tweenAtual = nil
+    end
+
+    -- Voa em Tween suave até o pad do baú
+    local dist = (hrp.Position - posTopoPad).Magnitude
+    local duracaoTween = math.clamp(dist / math.max(VELOCIDADE_TWEEN, 100), 0.15, 6.0)
+    local tweenInfo = TweenInfo.new(duracaoTween, Enum.EasingStyle.Linear)
+
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    local tweenBau = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(posTopoPad, posTopoPad + hrp.CFrame.LookVector)})
+    tweenAtual = tweenBau
+    tweenBau:Play()
+
+    local inicioVoo = os.clock()
+    while (os.clock() - inicioVoo < duracaoTween) and not sessao.Limpar and acaoEspecialAtiva do
+        if (hrp.Position - posTopoPad).Magnitude <= 3.0 then
+            break
+        end
+
+        -- Toques antecipados ao se aproximar do pad durante o voo
+        if (hrp.Position - posTopoPad).Magnitude <= 8.0 then
+            if typeof(firetouchinterest) == "function" then
+                pcall(function()
+                    firetouchinterest(hrp, padPart, 0)
+                    task.wait()
+                    firetouchinterest(hrp, padPart, 1)
+                end)
+            end
+        end
+        task.wait(0.02)
+    end
+
+    if tweenAtual == tweenBau then
+        pcall(function() tweenBau:Cancel() end)
+        tweenAtual = nil
+    end
+
+    hrp.CFrame = CFrame.new(posTopoPad)
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    task.wait(0.04)
+
+    -- Membros para colisão física e touch interest
+    local partesChar = { hrp }
+    for _, name in ipairs({"LeftFoot", "RightFoot", "Left Leg", "Right Leg", "LowerTorso", "Torso"}) do
+        local p = char:FindFirstChild(name)
+        if p and p:IsA("BasePart") then
+            table.insert(partesChar, p)
+        end
+    end
+
+    -- Waypoints para o boneco andar em cruz e círculos em cima do pad
+    local waypoints = {
+        Vector3.new(0, 0, 0),
+        Vector3.new(1.8, 0, 0),
+        Vector3.new(-1.8, 0, 0),
+        Vector3.new(0, 0, 1.8),
+        Vector3.new(0, 0, -1.8),
+        Vector3.new(1.2, 0, 1.2),
+        Vector3.new(-1.2, 0, -1.2)
+    }
+
+    local inicioTempo = os.clock()
+    local tempoLimite = math.max(TEMPO_PAD_BAU + 1.2, 2.2)
+    local wpIndex = 1
+
+    while (os.clock() - inicioTempo < tempoLimite) and not sessao.Limpar and acaoEspecialAtiva do
+        -- Verifica se o baú já foi registrado / sumiu
+        if estaBauColetadoOuInvisivel(bInfo) then
+            break
+        end
+
+        local offset = waypoints[wpIndex]
+        local pontoPasso = basePos + offset + Vector3.new(0, 2.3, 0)
+        wpIndex = (wpIndex % #waypoints) + 1
+
+        -- Move o personagem andando no pad e atualiza velocidade física
+        pcall(function()
+            hum:MoveTo(pontoPasso)
+            hrp.CFrame = CFrame.new(pontoPasso, basePos)
+            hrp.AssemblyLinearVelocity = (pontoPasso - hrp.Position).Unit * 8
+        end)
+
+        -- Toques contínuos em todos os membros
+        if typeof(firetouchinterest) == "function" then
+            for _, pChar in ipairs(partesChar) do
+                pcall(function()
+                    firetouchinterest(pChar, padPart, 0)
+                    task.wait()
+                    firetouchinterest(pChar, padPart, 1)
+                    if chestPart and chestPart ~= padPart then
+                        firetouchinterest(pChar, chestPart, 0)
+                        task.wait()
+                        firetouchinterest(pChar, chestPart, 1)
+                    end
+                end)
+            end
+
+            if chestModel then
+                for _, child in ipairs(chestModel:GetDescendants()) do
+                    if child:IsA("BasePart") then
+                        pcall(function()
+                            firetouchinterest(hrp, child, 0)
+                            task.wait()
+                            firetouchinterest(hrp, child, 1)
+                        end)
+                    end
+                end
+            end
+        end
+
+        -- Invocação de remotes e serviços de ativação do jogo
+        if NetworkRemoteEvent then
+            pcall(function()
+                NetworkRemoteEvent:FireServer("CollectChestReward", nomeIlha)
+            end)
+        end
+
+        pcall(function()
+            local servicesMod = require(ReplicatedStorage.Assets.Modules.Services)
+            local actService = servicesMod:GetService("ActivationService")
+            if actService and actService.Activation then
+                for actObj, actData in pairs(actService.Activation) do
+                    if actObj and string.find(tostring(actObj.Name), nomeIlha) and typeof(actData[1]) == "function" then
+                        pcall(actData[1])
+                    end
+                end
+            end
+        end)
+
+        task.wait(0.06)
+    end
+
+    task.wait(0.03)
+end
+
+local function obterListaBausMundoAtual()
+    local listaBaus = {}
+    local floating = Workspace:FindFirstChild("FloatingIslands")
+    if floating then
+        for _, obj in ipairs(floating:GetDescendants()) do
+            if obj.Name == "Chest" and obj:IsA("Model") then
+                local nomeIlha = obj.Parent and obj.Parent.Name or "Ilha"
+                if estaBauDisponivel(obj, nomeIlha) then
+                    local padPart, chestPart = obterPadEBau(obj, nomeIlha)
+                    if padPart and padPart:IsA("BasePart") then
+                        table.insert(listaBaus, {
+                            Nome = nomeIlha,
+                            Pad = padPart,
+                            Chest = chestPart,
+                            Model = obj
+                        })
+                    end
+                end
+            end
+        end
+    end
+    return listaBaus
+end
+
+local function coletarBausMundoAtualSweep()
+    if acaoEspecialAtiva then return end
+    acaoEspecialAtiva = true
+
+    local char, hrp, hum = obterPersonagem()
+    if not char or not hrp or not hum then
+        acaoEspecialAtiva = false
+        return
+    end
+
+    if tweenAtual then
+        pcall(function() tweenAtual:Cancel() end)
+        tweenAtual = nil
+    end
+
+    local posInicial = hrp.CFrame
+    gerenciarNoclip(true)
+
+    local listaBaus = obterListaBausMundoAtual()
+    notificar("Iniciando coleta via Tween de " .. #listaBaus .. " baús...", 3)
+
+    local coletados = 0
+    for i = 1, #listaBaus do
+        if sessao.Limpar then break end
+        local bInfo = listaBaus[i]
+        coletarBauNoPad(bInfo, char, hrp, hum)
+        coletados = coletados + 1
+        task.wait(0.05)
+    end
+
+    -- Retorno exato à posição inicial antes do clique
+    local cFim, hFim = obterPersonagem()
+    if hFim then
+        hFim.CFrame = posInicial
+        hFim.AssemblyLinearVelocity = Vector3.zero
+        criarOuMoverPlataformaSegura(hFim.Position)
+    end
+    gerenciarNoclip(ATIVADO and NOCLIP_ATIVO)
+
+    notificar("Coleta concluída: " .. coletados .. " baús coletados!", 3)
+    acaoEspecialAtiva = false
+end
+
+local function coletarBausRapidoComSweep()
+    if acaoEspecialAtiva then return end
+    acaoEspecialAtiva = true
+
+    local char, hrp, hum = obterPersonagem()
+    if not char or not hrp or not hum then
+        acaoEspecialAtiva = false
+        return
+    end
+
+    if tweenAtual then
+        pcall(function() tweenAtual:Cancel() end)
+        tweenAtual = nil
+    end
+
+    local posInicial = hrp.CFrame
+    gerenciarNoclip(true)
+
+    local ws = obterWorldService()
+    local mundoInicial = "Overworld"
+    if ws and typeof(ws.GetCurrentWorld) == "function" then
+        pcall(function() mundoInicial = ws:GetCurrentWorld() or "Overworld" end)
+    end
+
+    local todosMundos = { "Overworld", "Candy Land", "Toy Land", "Beach World", "Atlantis", "Rainbow Land", "Underworld", "Mystic Forest", "Heaven" }
+    local totalColetadosGeral = 0
+
+    notificar("Iniciando coleta global de baús com Tween...", 3)
+
+    for _, mundo in ipairs(todosMundos) do
+        if sessao.Limpar then break end
+
+        if ws and typeof(ws.GetCurrentWorld) == "function" and ws:GetCurrentWorld() ~= mundo then
+            viajarParaMundo(mundo)
+            task.wait(0.8)
+        end
+
+        local listaBaus = obterListaBausMundoAtual()
+        for i = 1, #listaBaus do
+            if sessao.Limpar then break end
+            local bInfo = listaBaus[i]
+            coletarBauNoPad(bInfo, char, hrp, hum)
+            totalColetadosGeral = totalColetadosGeral + 1
+            task.wait(0.05)
+        end
+    end
+
+    if ws and typeof(ws.GetCurrentWorld) == "function" and ws:GetCurrentWorld() ~= mundoInicial then
+        viajarParaMundo(mundoInicial)
+        task.wait(0.8)
+    end
+
+    -- Retorno exato à posição inicial antes do clique
+    local cFim, hFim = obterPersonagem()
+    if hFim then
+        hFim.CFrame = posInicial
+        hFim.AssemblyLinearVelocity = Vector3.zero
+        criarOuMoverPlataformaSegura(hFim.Position)
+    end
+    gerenciarNoclip(ATIVADO and NOCLIP_ATIVO)
+
+    notificar("Varredura concluída: " .. totalColetadosGeral .. " baús coletados!", 3.5)
+    acaoEspecialAtiva = false
+end
+
+-- ==================== ABERTURA DE OVOS (AUTO DETECTA O MAIS PRÓXIMO) ====================
 local function obterOvoMaisProximo(origem)
     local menorDist = math.huge
     local ovoMaisProx = nil
@@ -753,45 +1098,6 @@ local function obterOvoMaisProximo(origem)
     return ovoMaisProx, nomeOvo, menorDist
 end
 
-local function obterOvoPorNome(nome)
-    if not nome or nome == "" then return nil, nil end
-    local function escanear(pasta)
-        if not pasta then return nil, nil end
-        for _, obj in ipairs(pasta:GetChildren()) do
-            if obj.Name == nome then
-                local pp = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
-                if pp then return obj, pp end
-            end
-            local sub = obj:FindFirstChild(nome)
-            if sub then
-                local pp = sub.PrimaryPart or sub:FindFirstChildWhichIsA("BasePart", true)
-                if pp then return sub, pp end
-            end
-        end
-        return nil, nil
-    end
-
-    local o, p = escanear(Workspace:FindFirstChild("Eggs"))
-    if o then return o, p end
-
-    local eggStatue = Workspace:FindFirstChild("EggStatue")
-    if eggStatue then
-        o, p = escanear(eggStatue:FindFirstChild("Eggs"))
-        if o then return o, p end
-    end
-
-    local floating = Workspace:FindFirstChild("FloatingIslands")
-    if floating then
-        for _, island in ipairs(floating:GetDescendants()) do
-            if island.Name == "Eggs" and island:IsA("Folder") then
-                o, p = escanear(island)
-                if o then return o, p end
-            end
-        end
-    end
-    return nil, nil
-end
-
 local function pularAnimacaoOvo()
     if not SKIP_EGG_ANIM then return end
     pcall(function()
@@ -821,13 +1127,29 @@ local function abrirOvoCompleto(nomeOvo, ovoObj)
         if hotkeyService and hotkeyService.GetActiveHotkeys then
             local hotkeys = hotkeyService:GetActiveHotkeys()
             for _, hk in pairs(hotkeys) do
-                if hk.Function then
-                    hk.Function()
-                elseif hk.Function2 then
-                    hk.Function2()
-                elseif hk.Function3 then
-                    hk.Function3()
+                if typeof(hk) == "table" then
+                    if QTD_OVOS == 3 and hk.Function2 then
+                        pcall(hk.Function2)
+                    elseif hk.Function then
+                        pcall(hk.Function)
+                    elseif hk.Function3 then
+                        pcall(hk.Function3)
+                    end
                 end
+            end
+        end
+    end)
+
+    pcall(function()
+        local servicesMod = require(ReplicatedStorage.Assets.Modules.Services)
+        local eggService = servicesMod:GetService("EggService") or servicesMod:GetService("EggsService")
+        if eggService then
+            if typeof(eggService.Hatch) == "function" then
+                eggService:Hatch(nomeOvo, QTD_OVOS)
+            elseif typeof(eggService.Open) == "function" then
+                eggService:Open(nomeOvo, QTD_OVOS)
+            elseif typeof(eggService.Buy) == "function" then
+                eggService:Buy(nomeOvo, QTD_OVOS)
             end
         end
     end)
@@ -846,29 +1168,18 @@ local function abrirOvoCompleto(nomeOvo, ovoObj)
                 NetworkRemoteFunction:InvokeServer("BuyEgg", nomeOvo, QTD_OVOS)
             end)
             task.spawn(function()
+                NetworkRemoteFunction:InvokeServer("HatchEgg", nomeOvo, QTD_OVOS)
+            end)
+            task.spawn(function()
                 NetworkRemoteFunction:InvokeServer("OpenEgg", nomeOvo, QTD_OVOS)
             end)
-        end)
-    end
-
-    if VirtualInputManager then
-        pcall(function()
-            if QTD_OVOS == 3 then
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.R, false, game)
-                task.wait(0.03)
-                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.R, false, game)
-            else
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                task.wait(0.03)
-                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-            end
         end)
     end
 
     if ovoObj then
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hkPart = ovoObj:FindFirstChild("Hotkey") or ovoObj:FindFirstChildWhichIsA("BasePart", true)
+        local hkPart = ovoObj:FindFirstChild("Hotkey") or ovoObj:FindFirstChild("Root") or ovoObj.PrimaryPart or ovoObj:FindFirstChildWhichIsA("BasePart", true)
         if hrp and hkPart and typeof(firetouchinterest) == "function" then
             pcall(function()
                 firetouchinterest(hrp, hkPart, 0)
@@ -881,356 +1192,7 @@ local function abrirOvoCompleto(nomeOvo, ovoObj)
     pularAnimacaoOvo()
 end
 
-local function estaBauDisponivel(chestModel, nomeIlha)
-    if not chestModel or not chestModel.Parent then return false end
-
-    local chestPart = chestModel:FindFirstChild("Chest")
-    if chestPart and chestPart:IsA("BasePart") then
-        if chestPart.Transparency > 0.5 then
-            return false
-        end
-    end
-
-    local regenGui = chestModel:FindFirstChild("Regen")
-    if regenGui and (regenGui:IsA("SurfaceGui") or regenGui:IsA("BillboardGui")) then
-        if regenGui.Enabled == true then
-            return false
-        end
-    end
-
-    local dadosDisponivel = true
-    pcall(function()
-        local servicesMod = require(ReplicatedStorage.Assets.Modules.Services)
-        local network = servicesMod:GetService("Network")
-        local library = servicesMod:GetService("Library")
-        local idx = library("index")
-        if network and idx and idx.CHEST_REGEN_TIMES then
-            local regenTimes = network:Call("GetClientData", idx.CHEST_REGEN_TIMES)
-            if type(regenTimes) == "table" then
-                local serverTime = os.time()
-                local chestScript = ReplicatedStorage.Assets.Modules:FindFirstChild("ChestLayerService")
-                if chestScript and chestScript:FindFirstChild("ServerTime") then
-                    serverTime = chestScript.ServerTime.Value
-                end
-
-                for _, entry in ipairs(regenTimes) do
-                    if entry[1] == nomeIlha then
-                        local expireTime = entry[2]
-                        if expireTime and (expireTime - serverTime) > 0 then
-                            dadosDisponivel = false
-                        end
-                        break
-                    end
-                end
-            end
-        end
-    end)
-
-    return dadosDisponivel
-end
-
-local function obterPadEBau(chestModel, nomeIlha)
-    local padPart = nil
-    local chestPart = chestModel:FindFirstChild("Chest")
-
-    for _, child in ipairs(chestModel:GetChildren()) do
-        if child:IsA("Model") and string.find(child.Name, "Chest Collect") then
-            padPart = child:FindFirstChild("Root") or child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
-            if padPart then break end
-        end
-    end
-
-    if not padPart then
-        local actModel = Workspace:FindFirstChild("Activations") and Workspace.Activations:FindFirstChild("Chest Collect " .. nomeIlha)
-        if actModel then
-            padPart = actModel:FindFirstChild("Root") or actModel.PrimaryPart or actModel:FindFirstChildWhichIsA("BasePart")
-        end
-    end
-
-    if not padPart then
-        padPart = chestModel:FindFirstChild("Root", true) or chestModel:FindFirstChild("Particles") or chestPart
-    end
-
-    return padPart or chestPart, chestPart or padPart
-end
-
-local function obterWorldService()
-    local ws = nil
-    pcall(function()
-        local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-        if pg and pg:FindFirstChild("ScreenGui") and pg.ScreenGui:FindFirstChild("ClientScript") and pg.ScreenGui.ClientScript:FindFirstChild("Modules") then
-            local mod = pg.ScreenGui.ClientScript.Modules:FindFirstChild("WorldService")
-            if mod then
-                ws = require(mod)
-            end
-        end
-    end)
-    if not ws then
-        pcall(function()
-            local servicesMod = require(ReplicatedStorage.Assets.Modules.Services)
-            ws = servicesMod:GetService("WorldService")
-        end)
-    end
-    return ws
-end
-
-local function viajarParaMundo(nomeMundo)
-    if not nomeMundo then return end
-
-    if tweenAtual then
-        pcall(function() tweenAtual:Cancel() end)
-        tweenAtual = nil
-    end
-
-    local char, hrp, hum = obterPersonagem()
-    if hrp then
-        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-    end
-    gerenciarNoclip(true)
-
-    pcall(function()
-        if NetworkRemoteFunction then
-            NetworkRemoteFunction:InvokeServer("BuyWorld", nomeMundo)
-        end
-        if NetworkRemoteEvent then
-            NetworkRemoteEvent:FireServer("BuyWorld", nomeMundo)
-        end
-    end)
-
-    local ws = obterWorldService()
-    local trocouPeloService = false
-    if ws and typeof(ws.SetWorld) == "function" then
-        pcall(function()
-            ws:SetWorld(nomeMundo)
-            trocouPeloService = true
-        end)
-    end
-
-    if not trocouPeloService or (ws and typeof(ws.GetCurrentWorld) == "function" and ws:GetCurrentWorld() ~= nomeMundo) then
-        pcall(function()
-            if NetworkRemoteFunction then
-                task.spawn(function()
-                    NetworkRemoteFunction:InvokeServer("Teleport", nomeMundo .. "Spawn")
-                end)
-            end
-            if NetworkRemoteEvent then
-                NetworkRemoteEvent:FireServer("Teleport", nomeMundo .. "Spawn")
-            end
-        end)
-    end
-
-    task.delay(1.5, function()
-        local c, h, hm = obterPersonagem()
-        if h then
-            h.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        end
-        gerenciarNoclip(ATIVADO and NOCLIP_ATIVO)
-    end)
-
-    notificar("Viajando para: " .. tostring(nomeMundo), 3)
-end
-
-local function coletarBausRapidoComSweep()
-    if acaoEspecialAtiva then return end
-    acaoEspecialAtiva = true
-
-    local char, hrp, hum = obterPersonagem()
-    if not char or not hrp or not hum then
-        acaoEspecialAtiva = false
-        return
-    end
-
-    if tweenAtual then
-        pcall(function() tweenAtual:Cancel() end)
-        tweenAtual = nil
-    end
-
-    local posInicial = hrp.CFrame
-    gerenciarNoclip(true)
-
-    local ws = obterWorldService()
-    local mundoInicial = "Overworld"
-    if ws and typeof(ws.GetCurrentWorld) == "function" then
-        pcall(function() mundoInicial = ws:GetCurrentWorld() or "Overworld" end)
-    end
-
-    local todosMundos = { "Overworld", "Candy Land", "Toy Land", "Beach World", "Atlantis", "Rainbow Land", "Underworld", "Mystic Forest", "Heaven" }
-    local totalColetadosGeral = 0
-
-    notificar("Iniciando varredura global em todos os mundos...", 3)
-
-    for _, mundo in ipairs(todosMundos) do
-        if sessao.Limpar then break end
-
-        if ws and typeof(ws.GetCurrentWorld) == "function" and ws:GetCurrentWorld() ~= mundo then
-            viajarParaMundo(mundo)
-            task.wait(0.6)
-        end
-
-        local listaBaus = {}
-        local floating = Workspace:FindFirstChild("FloatingIslands")
-        if floating then
-            for _, obj in ipairs(floating:GetDescendants()) do
-                if obj.Name == "Chest" and obj:IsA("Model") then
-                    local nomeIlha = obj.Parent and obj.Parent.Name or "Ilha"
-                    if estaBauDisponivel(obj, nomeIlha) then
-                        local padPart, chestPart = obterPadEBau(obj, nomeIlha)
-                        if padPart and padPart:IsA("BasePart") then
-                            table.insert(listaBaus, {
-                                Nome = nomeIlha,
-                                Pad = padPart,
-                                Chest = chestPart,
-                                Model = obj
-                            })
-                        end
-                    end
-                end
-            end
-        end
-
-        local totalMundo = #listaBaus
-        for i = 1, totalMundo do
-            if sessao.Limpar then break end
-            local bInfo = listaBaus[i]
-            local padPart = bInfo.Pad
-            local chestPart = bInfo.Chest
-
-            local posPadEmCima = padPart.Position + Vector3.new(0, 3.2, 0)
-            local posPadCentro = padPart.Position
-            local posDentroBau = (chestPart and chestPart.Position) or posPadCentro
-
-            for step = 1, 6 do
-                if step % 3 == 1 then
-                    hrp.CFrame = CFrame.new(posPadEmCima)
-                elseif step % 3 == 2 then
-                    hrp.CFrame = CFrame.new(posPadCentro)
-                else
-                    hrp.CFrame = CFrame.new(posDentroBau)
-                end
-                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-
-                if typeof(firetouchinterest) == "function" then
-                    pcall(function()
-                        firetouchinterest(hrp, padPart, 0)
-                        task.wait(0.015)
-                        firetouchinterest(hrp, padPart, 1)
-                        if chestPart and chestPart ~= padPart then
-                            firetouchinterest(hrp, chestPart, 0)
-                            task.wait(0.015)
-                            firetouchinterest(hrp, chestPart, 1)
-                        end
-                    end)
-                    for _, d in ipairs(bInfo.Model:GetDescendants()) do
-                        if d:IsA("BasePart") and (d.Name == "Root" or d.Name == "Chest" or d.Name == "Particles") then
-                            pcall(function()
-                                firetouchinterest(hrp, d, 0)
-                                task.wait()
-                                firetouchinterest(hrp, d, 1)
-                            end)
-                        end
-                    end
-                end
-
-                if NetworkRemoteEvent then
-                    pcall(function()
-                        NetworkRemoteEvent:FireServer("CollectChestReward", bInfo.Nome)
-                    end)
-                end
-
-                pcall(function()
-                    local servicesMod = require(ReplicatedStorage.Assets.Modules.Services)
-                    local actService = servicesMod:GetService("ActivationService")
-                    if actService and actService.Activation then
-                        for actObj, actData in pairs(actService.Activation) do
-                            if actObj and string.find(tostring(actObj.Name), bInfo.Nome) and typeof(actData[1]) == "function" then
-                                pcall(actData[1])
-                            end
-                        end
-                    end
-                end)
-
-                task.wait(0.05)
-            end
-            totalColetadosGeral = totalColetadosGeral + 1
-            task.wait(0.04)
-        end
-    end
-
-    if ws and typeof(ws.GetCurrentWorld) == "function" and ws:GetCurrentWorld() ~= mundoInicial then
-        viajarParaMundo(mundoInicial)
-        task.wait(0.6)
-    end
-
-    hrp.CFrame = posInicial
-    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-    gerenciarNoclip(ATIVADO)
-
-    notificar("Varredura concluida: " .. totalColetadosGeral .. " baus coletados!", 4)
-    acaoEspecialAtiva = false
-end
-
-local function tweenAteMoeda(alvoInfo)
-    local char, hrp, hum = obterPersonagem()
-    if not char or not hrp or not hum then return false end
-
-    local destino = alvoInfo.Posicao + Vector3.new(0, ALTURA_OFFSET, 0)
-    local item = alvoInfo.Instancia
-    local part = alvoInfo.Part
-
-    ultimoAlvoInstancia = item
-    historicoRecentes[item] = os.clock() + TEMPO_COOLDOWN_MOEDA
-
-    local dist = (hrp.Position - destino).Magnitude
-    local duracao = math.clamp(dist / VELOCIDADE_TWEEN, 0.02, 1.0)
-
-    local tweenInfo = TweenInfo.new(duracao, Enum.EasingStyle.Linear)
-    local cframeAlvo = CFrame.new(destino, destino + hrp.CFrame.LookVector)
-
-    if tweenAtual then
-        pcall(function() tweenAtual:Cancel() end)
-        tweenAtual = nil
-    end
-
-    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-    tweenAtual = TweenService:Create(hrp, tweenInfo, {CFrame = cframeAlvo})
-    tweenAtual:Play()
-
-    local inicio = os.clock()
-    local ultimoMagnet = 0
-    while ATIVADO and not sessao.Limpar and not acaoEspecialAtiva and (os.clock() - inicio < duracao + 0.03) do
-        if not item or not item.Parent then
-            pcall(function() tweenAtual:Cancel() end)
-            tentarTocar(hrp, part)
-            aspirarMoedasProximas(hrp)
-            totalColetadas = totalColetadas + 1
-            return true
-        end
-
-        local agora = os.clock()
-        if agora - ultimoMagnet > 0.06 then
-            ultimoMagnet = agora
-            aspirarMoedasProximas(hrp)
-        end
-
-        local distAtual = (hrp.Position - destino).Magnitude
-        if distAtual <= 3.5 then
-            tentarTocar(hrp, part)
-            if not item.Parent or distAtual <= 1.2 then
-                pcall(function() tweenAtual:Cancel() end)
-                aspirarMoedasProximas(hrp)
-                totalColetadas = totalColetadas + 1
-                return true
-            end
-        end
-
-        task.wait(0.015)
-    end
-
-    tentarTocar(hrp, part)
-    aspirarMoedasProximas(hrp)
-    return true
-end
-
+-- ==================== RECOMPENSAS LIMPAS ====================
 local function coletarMegaRoletas()
     if not NetworkRemoteEvent then return end
 
@@ -1250,52 +1212,6 @@ local function coletarMegaRoletas()
             task.spawn(function() NetworkRemoteFunction:InvokeServer("VIPSpinToWin") end)
             task.spawn(function() NetworkRemoteFunction:InvokeServer("SpinToWinSpooky") end)
         end)
-    end
-end
-
-local function coletarRecompensasTotensMundos()
-    local char, hrp, hum = obterPersonagem()
-    local activations = Workspace:FindFirstChild("Activations")
-
-    pcall(function()
-        local servicesMod = require(ReplicatedStorage.Assets.Modules.Services)
-        local actService = servicesMod:GetService("ActivationService")
-        if actService and actService.Activation then
-            for actObj, actData in pairs(actService.Activation) do
-                if actObj and typeof(actData[1]) == "function" then
-                    for _, nomeTotem in ipairs(totensMundos) do
-                        if string.find(tostring(actObj.Name), nomeTotem) then
-                            pcall(actData[1])
-                        end
-                    end
-                end
-            end
-        end
-    end)
-
-    if activations and hrp and typeof(firetouchinterest) == "function" then
-        for _, nomeTotem in ipairs(totensMundos) do
-            local totem = activations:FindFirstChild(nomeTotem)
-            if totem then
-                local root = totem:FindFirstChild("Root") or totem:FindFirstChildWhichIsA("BasePart", true)
-                if root then
-                    pcall(function()
-                        firetouchinterest(hrp, root, 0)
-                        task.wait()
-                        firetouchinterest(hrp, root, 1)
-                    end)
-                end
-            end
-        end
-    end
-
-    if NetworkRemoteEvent then
-        for _, nomeTotem in ipairs(totensMundos) do
-            pcall(function()
-                NetworkRemoteEvent:FireServer("ClaimWorldReward", nomeTotem)
-                NetworkRemoteEvent:FireServer("ClaimReward", nomeTotem)
-            end)
-        end
     end
 end
 
@@ -1324,12 +1240,9 @@ local function coletarPremiosEGiros()
     if AUTO_MEGA_SPIN then
         coletarMegaRoletas()
     end
-
-    if AUTO_WORLD_REWARDS then
-        coletarRecompensasTotensMundos()
-    end
 end
 
+-- ==================== CÓDIGOS ====================
 local function resgatarListaCodigos(lista, nomeCategoria)
     if not lista or #lista == 0 then return end
     notificar("Resgatando: " .. (nomeCategoria or "Selecionados"), 2)
@@ -1354,7 +1267,7 @@ local function resgatarListaCodigos(lista, nomeCategoria)
         end
         task.wait(0.04)
     end
-    notificar("Codigos ativados: " .. (nomeCategoria or "Selecionados"), 2)
+    notificar("Códigos ativados: " .. (nomeCategoria or "Selecionados"), 2)
 end
 
 local function extrairNomeCodigo(item)
@@ -1374,7 +1287,7 @@ local function resgatarUmCodigo(item)
     if not codigo or codigo == "" or string.find(codigo, "Selecione") or string.find(codigo, "^%-") then
         return
     end
-    notificar("Codigo enviado: " .. codigo, 2)
+    notificar("Código enviado: " .. codigo, 2)
     if NetworkRemoteFunction then
         pcall(function()
             task.spawn(function() NetworkRemoteFunction:InvokeServer("PickCode", codigo) end)
@@ -1389,6 +1302,7 @@ local function resgatarUmCodigo(item)
     end
 end
 
+-- ==================== DESBLOQUEAR TODAS AS ILHAS ====================
 local function desbloquearTodasIlhasDefinitivo()
     if acaoEspecialAtiva then return end
     acaoEspecialAtiva = true
@@ -1456,13 +1370,13 @@ local function desbloquearTodasIlhasDefinitivo()
 
         local posAlvo = cp.Part.Position + Vector3.new(0, 3, 0)
         hrp.CFrame = CFrame.new(posAlvo)
-        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        hrp.AssemblyLinearVelocity = Vector3.zero
 
-        for step = 1, 3 do
+        for step = 1, 2 do
             if typeof(firetouchinterest) == "function" then
                 pcall(function()
                     firetouchinterest(hrp, cp.Part, 0)
-                    task.wait(0.04)
+                    task.wait(0.03)
                     firetouchinterest(hrp, cp.Part, 1)
                 end)
 
@@ -1471,7 +1385,7 @@ local function desbloquearTodasIlhasDefinitivo()
                         if obj:IsA("BasePart") and (obj.Name == "Door" or obj.Name == "TeleportPoint" or obj.Name == "FastSpawn" or obj.Name == "Collision" or obj.Name == "TeleportToSurface") then
                             pcall(function()
                                 firetouchinterest(hrp, obj, 0)
-                                task.wait(0.02)
+                                task.wait(0.015)
                                 firetouchinterest(hrp, obj, 1)
                             end)
                         end
@@ -1487,10 +1401,9 @@ local function desbloquearTodasIlhasDefinitivo()
                     NetworkRemoteEvent:FireServer("UnlockIsland", cp.Nome)
                 end)
             end
-            task.wait(0.08)
+            task.wait(0.06)
         end
-
-        task.wait(0.05)
+        task.wait(0.04)
     end
 
     local checkpointsFolder = Workspace:FindFirstChild("Checkpoints")
@@ -1508,25 +1421,25 @@ local function desbloquearTodasIlhasDefinitivo()
     end
 
     hrp.CFrame = posInicial
-    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-    gerenciarNoclip(ATIVADO)
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    gerenciarNoclip(ATIVADO and NOCLIP_ATIVO)
 
     notificar("Ilhas e checkpoints desbloqueados", 3)
     acaoEspecialAtiva = false
 end
 
--- ==================== CONSTRUÇÃO DA INTERFACE (WINDUI) ====================
+-- ==================== ELEMENTOS DA INTERFACE ====================
 
--- Aba: Farm & Ovos
-FarmTab:Section({ Title = "Coleta Automatica" })
+-- 1. ABA: AUTO FARM
+FarmTab:Section({ Title = "Coleta Automática de Moedas (Tween Suave)" })
 
 FarmTab:Toggle({
     Title = "Auto Farm Moedas",
-    Desc = "Coleta moedas, caixas e pickups no mapa",
+    Desc = "Movimento contínuo e fluido coletando moedas no mapa",
     Value = ATIVADO,
     Callback = function(v)
         ATIVADO = v
-        gerenciarNoclip(ATIVADO)
+        gerenciarNoclip(ATIVADO and NOCLIP_ATIVO)
         if not ATIVADO then
             if tweenAtual then
                 pcall(function() tweenAtual:Cancel() end)
@@ -1543,7 +1456,7 @@ FarmTab:Toggle({
                                 if alvo and alvo.Instancia and alvo.Instancia.Parent then
                                     tweenAteMoeda(alvo)
                                 else
-                                    task.wait(0.2)
+                                    task.wait(0.15)
                                 end
                             else
                                 task.wait(1)
@@ -1561,9 +1474,23 @@ FarmTab:Toggle({
     end
 })
 
+FarmTab:Slider({
+    Title = "Velocidade Tween",
+    Desc = "Velocidade de movimento suave (studs/s)",
+    Step = 5,
+    Value = {
+        Min = 40,
+        Max = 250,
+        Default = VELOCIDADE_TWEEN
+    },
+    Callback = function(v)
+        VELOCIDADE_TWEEN = v
+    end
+})
+
 FarmTab:Dropdown({
     Title = "Filtro de Moedas",
-    Desc = "Prioridade de tipos de pickup",
+    Desc = "Selecione o tipo prioritário de pickups",
     Values = { "Tudo", "Apenas Caixas Grandes", "Apenas Gemas", "Moedas / Mundo" },
     Value = "Tudo",
     Multi = false,
@@ -1572,23 +1499,9 @@ FarmTab:Dropdown({
     end
 })
 
-FarmTab:Slider({
-    Title = "Velocidade Tween",
-    Desc = "Velocidade de movimento (studs/s)",
-    Step = 5,
-    Value = {
-        Min = 60,
-        Max = 400,
-        Default = VELOCIDADE_TWEEN
-    },
-    Callback = function(v)
-        VELOCIDADE_TWEEN = v
-    end
-})
-
 FarmTab:Toggle({
-    Title = "Priorizar Baus",
-    Desc = "Prioriza baus e caixas no calculo de rota",
+    Title = "Priorizar Baús e Caixas",
+    Desc = "Prioriza baús e caixas na rota de coleta",
     Value = PRIORIZAR_CAIXAS,
     Callback = function(v)
         PRIORIZAR_CAIXAS = v
@@ -1597,7 +1510,7 @@ FarmTab:Toggle({
 
 FarmTab:Toggle({
     Title = "Noclip",
-    Desc = "Desativa colisao do personagem",
+    Desc = "Atravessa colisões durante o farm",
     Value = NOCLIP_ATIVO,
     Callback = function(v)
         NOCLIP_ATIVO = v
@@ -1605,78 +1518,83 @@ FarmTab:Toggle({
     end
 })
 
-FarmTab:Section({ Title = "Bolhas & Ovos" })
+FarmTab:Section({ Title = "Bolhas Automáticas" })
 
 FarmTab:Toggle({
     Title = "Auto Bubble",
-    Desc = "Sopra bolhas continuamente",
+    Desc = "Sopra bolhas automaticamente sem parar",
     Value = AUTO_BUBBLE,
     Callback = function(v)
         AUTO_BUBBLE = v
     end
 })
 
-FarmTab:Dropdown({
-    Title = "Ovo Alvo",
-    Desc = "Ovo selecionado para abertura ou trava",
-    Values = listaOvosDisponiveis,
-    Value = "Common Egg",
-    Multi = false,
-    Callback = function(v)
-        OVO_SELECIONADO = (typeof(v) == "table" and v[1]) or v or "Common Egg"
-    end
-})
+-- 2. ABA: OVOS
+EggTab:Section({ Title = "Abertura de Ovos (Sem Teclado / Mobile & PC)" })
 
-FarmTab:Dropdown({
+EggTab:Dropdown({
     Title = "Quantidade por Abertura",
-    Desc = "Numero de ovos por ciclo",
-    Values = { "1 Ovo (Padrao)", "3 Ovos (Gamepass)" },
-    Value = "1 Ovo (Padrao)",
+    Desc = "Número de ovos por ciclo de abertura (Padrão: 3)",
+    Values = { "3 Ovos (Gamepass)", "1 Ovo (Padrão)" },
+    Value = "3 Ovos (Gamepass)",
     Multi = false,
     Callback = function(v)
         local opt = (typeof(v) == "table" and v[1]) or v or ""
-        if string.find(tostring(opt), "3") then
-            QTD_OVOS = 3
-        else
+        if string.find(tostring(opt), "1") then
             QTD_OVOS = 1
+        else
+            QTD_OVOS = 3
         end
     end
 })
 
-FarmTab:Toggle({
-    Title = "Fixar no Ovo (AFK)",
-    Desc = "Trava o personagem flutuando sobre o ovo selecionado",
-    Value = TRAVAR_NO_OVO,
+EggTab:Toggle({
+    Title = "Spam Ovos (Ovo Mais Próximo)",
+    Desc = "Abre continuamente em alta velocidade o ovo onde você estiver perto",
+    Value = SPAM_EGG,
     Callback = function(v)
-        TRAVAR_NO_OVO = v
-        gerenciarNoclip(TRAVAR_NO_OVO or ATIVADO)
+        SPAM_EGG = v
     end
 })
 
-FarmTab:Toggle({
-    Title = "Auto Egg (Proximidade)",
-    Desc = "Abre o ovo mais proximo",
+EggTab:Toggle({
+    Title = "Auto Egg (Proximidade Moderada)",
+    Desc = "Abre o ovo mais próximo com intervalo normal",
     Value = AUTO_EGG,
     Callback = function(v)
         AUTO_EGG = v
     end
 })
 
-FarmTab:Toggle({
-    Title = "Pular Animacao",
-    Desc = "Desativa animacao de abertura de ovos",
+EggTab:Slider({
+    Title = "Delay Spam Ovos (s)",
+    Desc = "Intervalo entre aberturas no modo spam",
+    Step = 0.02,
+    Value = {
+        Min = 0.05,
+        Max = 0.50,
+        Default = DELAY_EGG
+    },
+    Callback = function(v)
+        DELAY_EGG = v
+    end
+})
+
+EggTab:Toggle({
+    Title = "Pular Animação de Ovos",
+    Desc = "Oculta a tela e animação de abertura de ovos",
     Value = SKIP_EGG_ANIM,
     Callback = function(v)
         SKIP_EGG_ANIM = v
     end
 })
 
--- Aba: Recompensas
-RewardsTab:Section({ Title = "Presentes & Giros" })
+-- 3. ABA: RECOMPENSAS
+RewardsTab:Section({ Title = "Presentes & Roletas" })
 
 RewardsTab:Toggle({
-    Title = "Auto Giros & Presentes",
-    Desc = "Resgata playtime gifts e giros diarios",
+    Title = "Auto Presentes & Giros Diários",
+    Desc = "Resgata playtime gifts e giros diários automaticamente",
     Value = AUTO_REWARDS,
     Callback = function(v)
         AUTO_REWARDS = v
@@ -1692,46 +1610,49 @@ RewardsTab:Toggle({
     end
 })
 
-RewardsTab:Toggle({
-    Title = "Auto Totens",
-    Desc = "Coleta totens diarios em todos os mundos",
-    Value = AUTO_WORLD_REWARDS,
-    Callback = function(v)
-        AUTO_WORLD_REWARDS = v
-    end
-})
-
 RewardsTab:Button({
     Title = "Coletar Recompensas Agora",
-    Desc = "Dispara coleta imediata de giros, presentes e totens",
+    Desc = "Dispara coleta imediata de giros e presentes diários",
     Callback = function()
         coletarPremiosEGiros()
         coletarMegaRoletas()
-        coletarRecompensasTotensMundos()
-        notificar("Recompensas coletadas", 3)
+        notificar("Recompensas diárias coletadas", 3)
     end
 })
 
-RewardsTab:Section({ Title = "Baus" })
+RewardsTab:Section({ Title = "Baús com Validação de Pad" })
 
-RewardsTab:Toggle({
-    Title = "Auto Coleta de Baus",
-    Desc = "Dispara remotes de baus no loop de recompensas",
-    Value = AUTO_CHESTS,
+RewardsTab:Slider({
+    Title = "Tempo no Pad (s)",
+    Desc = "Tempo de permanência em cada pad para registrar o baú",
+    Step = 0.05,
+    Value = {
+        Min = 0.35,
+        Max = 1.50,
+        Default = TEMPO_PAD_BAU
+    },
     Callback = function(v)
-        AUTO_CHESTS = v
+        TEMPO_PAD_BAU = v
     end
 })
 
 RewardsTab:Button({
-    Title = "Varredura de Baus Intermundos",
-    Desc = "Visita todos os 9 mundos e coleta baus disponiveis",
+    Title = "Coletar Baús do Mundo Atual (Tween)",
+    Desc = "Voa em Tween e coleta todos os baús disponíveis no mundo atual",
+    Callback = function()
+        task.spawn(coletarBausMundoAtualSweep)
+    end
+})
+
+RewardsTab:Button({
+    Title = "Varredura Global de Baús (Todos Mundos)",
+    Desc = "Visita todos os 9 mundos voando em Tween para os baús",
     Callback = function()
         task.spawn(coletarBausRapidoComSweep)
     end
 })
 
-RewardsTab:Section({ Title = "Codigos de Sorte (2x Luck)" })
+RewardsTab:Section({ Title = "Códigos de Sorte (2x Luck)" })
 
 RewardsTab:Dropdown({
     Title = "Selecionar Boost de Sorte",
@@ -1746,7 +1667,7 @@ RewardsTab:Dropdown({
 
 RewardsTab:Button({
     Title = "Resgatar Todos (Sorte)",
-    Desc = "Ativa todos os 65 codigos de 2x Luck",
+    Desc = "Ativa todos os 65 códigos de 2x Luck",
     Callback = function()
         task.spawn(function()
             resgatarListaCodigos(codigosPorCategoria["Sorte (2x Luck)"], "Sorte")
@@ -1754,7 +1675,7 @@ RewardsTab:Button({
     end
 })
 
-RewardsTab:Section({ Title = "Codigos de Velocidade (2x Hatch Speed)" })
+RewardsTab:Section({ Title = "Códigos de Velocidade (2x Hatch Speed)" })
 
 RewardsTab:Dropdown({
     Title = "Selecionar Boost de Velocidade",
@@ -1769,7 +1690,7 @@ RewardsTab:Dropdown({
 
 RewardsTab:Button({
     Title = "Resgatar Todos (Velocidade)",
-    Desc = "Ativa todos os 60 codigos de 2x Hatch Speed",
+    Desc = "Ativa todos os 60 códigos de 2x Hatch Speed",
     Callback = function()
         task.spawn(function()
             resgatarListaCodigos(codigosPorCategoria["Hatch Speed (2x Velocidade)"], "Velocidade")
@@ -1777,7 +1698,7 @@ RewardsTab:Button({
     end
 })
 
-RewardsTab:Section({ Title = "Codigos de Shiny Chance (3x)" })
+RewardsTab:Section({ Title = "Códigos de Shiny Chance (3x)" })
 
 RewardsTab:Dropdown({
     Title = "Selecionar Boost de Shiny",
@@ -1792,7 +1713,7 @@ RewardsTab:Dropdown({
 
 RewardsTab:Button({
     Title = "Resgatar Todos (Shiny)",
-    Desc = "Ativa todos os codigos de 3x Shiny Chance",
+    Desc = "Ativa todos os códigos de 3x Shiny Chance",
     Callback = function()
         task.spawn(function()
             resgatarListaCodigos(codigosPorCategoria["Shiny Chance (3x Brilhante)"], "Shiny")
@@ -1800,10 +1721,10 @@ RewardsTab:Button({
     end
 })
 
-RewardsTab:Section({ Title = "Codigos de Moedas e Itens" })
+RewardsTab:Section({ Title = "Códigos de Moedas e Itens" })
 
 RewardsTab:Dropdown({
-    Title = "Selecionar Codigo de Item",
+    Title = "Selecionar Código de Item",
     Desc = "Resgata o item ou moeda selecionado",
     Values = codigosComDescricao["Moedas, Gemas, Doces e Pets"],
     Value = codigosComDescricao["Moedas, Gemas, Doces e Pets"][1],
@@ -1815,7 +1736,7 @@ RewardsTab:Dropdown({
 
 RewardsTab:Button({
     Title = "Resgatar Todos (Itens e Moedas)",
-    Desc = "Resgata todos os codigos de gemas, doces e pets",
+    Desc = "Resgata todos os códigos de gemas, doces e pets",
     Callback = function()
         task.spawn(function()
             resgatarListaCodigos(codigosPorCategoria["Moedas, Gemas, Doces e Pets"], "Itens e Moedas")
@@ -1823,7 +1744,7 @@ RewardsTab:Button({
     end
 })
 
--- Aba: Mundos
+-- 4. ABA: MUNDOS
 WorldsTab:Section({ Title = "Checkpoints & Ilhas" })
 
 WorldsTab:Button({
@@ -1838,7 +1759,7 @@ WorldsTab:Section({ Title = "Teleportes" })
 
 WorldsTab:Dropdown({
     Title = "Teleportar para Mundo",
-    Desc = "Teleporta para a area inicial do mundo escolhido",
+    Desc = "Teleporta para a área inicial do mundo escolhido",
     Values = {
         "Overworld", "Candy Land", "Toy Land", "Beach World",
         "Atlantis", "Rainbow Land", "Underworld", "Mystic Forest", "Heaven"
@@ -1851,46 +1772,19 @@ WorldsTab:Dropdown({
     end
 })
 
--- Aba: Estatisticas
-StatsTab:Section({ Title = "Painel de Estatisticas" })
-
-StatsTab:Toggle({
-    Title = "Exibir HUD",
-    Desc = "Exibe painel flutuante de estatisticas",
-    Value = HUD_ATIVO,
-    Callback = function(v)
-        HUD_ATIVO = v
-        if hudRefs and hudRefs.Frame then
-            hudRefs.Frame.Visible = HUD_ATIVO
-        end
-    end
-})
-
-StatsTab:Button({
-    Title = "Resetar Estatisticas",
-    Desc = "Zera os contadores da sessao atual",
-    Callback = function()
-        tempoInicioSessao = os.time()
-        capturarStatsIniciais()
-        totalColetadas = 0
-        totalOvosAbertos = 0
-        notificar("Estatisticas reiniciadas", 3)
-    end
-})
-
--- Aba: Configuracoes
+-- 5. ABA: CONFIGURAÇÕES
 ConfigTab:Section({ Title = "Sistema" })
 
 ConfigTab:Toggle({
-    Title = "Anti-AFK",
-    Desc = "Previne desconexao por inatividade",
+    Title = "Anti-AFK (Mobile & PC)",
+    Desc = "Previne desconexão sem depender de teclas",
     Value = true,
     Callback = function() end
 })
 
 ConfigTab:Toggle({
     Title = "Modo Economia (FPS)",
-    Desc = "Reduz qualidade visual para economia de recursos",
+    Desc = "Reduz qualidade visual para economia de recursos e bateria",
     Value = FPS_BOOST,
     Callback = function(v)
         FPS_BOOST = v
@@ -1898,6 +1792,7 @@ ConfigTab:Toggle({
     end
 })
 
+-- ==================== LIMPEZA DE PICKUPS REMOVIDOS ====================
 local pickupsFolder = Workspace:FindFirstChild("Pickups")
 if pickupsFolder then
     local remConexao = pickupsFolder.ChildRemoved:Connect(function(child)
@@ -1909,6 +1804,7 @@ if pickupsFolder then
     table.insert(sessao.Conexoes, remConexao)
 end
 
+-- ==================== ANTI-AFK UNIVERSAL (MOBILE & PC) ====================
 local idledConexao = LocalPlayer.Idled:Connect(function()
     pcall(function()
         VirtualUser:CaptureController()
@@ -1917,89 +1813,33 @@ local idledConexao = LocalPlayer.Idled:Connect(function()
 end)
 table.insert(sessao.Conexoes, idledConexao)
 
-threadAntiAfkExtra = task.spawn(function()
+threadAntiAfk = task.spawn(function()
     while not sessao.Limpar do
-        task.wait(180)
+        task.wait(120)
         pcall(function()
-            if VirtualInputManager then
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.RightShift, false, game)
-                task.wait(0.05)
-                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.RightShift, false, game)
-            end
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new(50, 50))
         end)
     end
 end)
-table.insert(sessao.Threads, threadAntiAfkExtra)
+table.insert(sessao.Threads, threadAntiAfk)
 
-capturarStatsIniciais()
-criarHUDStats()
-
-threadStats = task.spawn(function()
-    while not sessao.Limpar do
-        local agora = os.time()
-        local deltaSegundos = math.max(agora - tempoInicioSessao, 1)
-
-        local horas = math.floor(deltaSegundos / 3600)
-        local minutos = math.floor((deltaSegundos % 3600) / 60)
-        local segundos = deltaSegundos % 60
-        local strTempo = string.format("%02d:%02d:%02d", horas, minutos, segundos)
-
-        local moedasAtuais = obterValorStat("Coins", 1)
-        local gemasAtuais = obterValorStat("Gems", 4)
-        local bolhasAtuais = obterValorStat("Bubbles Blown", 7)
-        local ovosAtuais = obterValorStat("Eggs Opened", 22)
-
-        local moedasGanhas = math.max(moedasAtuais - moedasInicio, totalColetadas)
-        local gemasGanhas = math.max(gemasAtuais - gemasInicio, 0)
-        local bolhasGanhas = math.max(bolhasAtuais - bolhasInicio, 0)
-        local ovosGanhos = math.max(ovosAtuais - ovosInicio, totalOvosAbertos)
-
-        local moedasPorMin = math.floor((moedasGanhas / deltaSegundos) * 60)
-
-        local txtMoedas = "+" .. formatarNumero(moedasGanhas) .. " (+" .. formatarNumero(moedasPorMin) .. "/min)"
-        local txtGemas = "+" .. formatarNumero(gemasGanhas)
-        local txtBolhas = "+" .. formatarNumero(bolhasGanhas)
-        local txtOvos = "+" .. formatarNumero(ovosGanhos)
-
-        if hudRefs and hudRefs.Frame and hudRefs.Frame.Parent then
-            hudRefs.Tempo.Text = "Tempo: " .. strTempo
-            hudRefs.Moedas.Text = "Moedas: " .. txtMoedas
-            hudRefs.Gemas.Text = "Gemas: " .. txtGemas
-            hudRefs.Bolhas.Text = "Bolhas: " .. txtBolhas
-            hudRefs.Ovos.Text = "Ovos: " .. txtOvos
-        end
-
-        task.wait(1)
-    end
-end)
-table.insert(sessao.Threads, threadStats)
-
+-- ==================== THREADS PRINCIPAIS ====================
 threadEgg = task.spawn(function()
     while not sessao.Limpar do
-        if AUTO_EGG or TRAVAR_NO_OVO then
+        if SPAM_EGG or AUTO_EGG then
             local char, hrp, hum = obterPersonagem()
             if hrp and hum and hum.Health > 0 then
-                if TRAVAR_NO_OVO and OVO_SELECIONADO then
-                    local ovoObj, ovoPart = obterOvoPorNome(OVO_SELECIONADO)
-                    if ovoObj and ovoPart then
-                        local posAlvo = ovoPart.Position + Vector3.new(0, 4, 0)
-                        hrp.CFrame = CFrame.new(posAlvo)
-                        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                        abrirOvoCompleto(OVO_SELECIONADO, ovoObj)
-                        totalOvosAbertos = totalOvosAbertos + QTD_OVOS
-                        task.wait(0.2)
+                local ovoObj, nomeOvo, dist = obterOvoMaisProximo(hrp.Position)
+                if nomeOvo and dist <= DISTANCIA_MAX_OVO then
+                    abrirOvoCompleto(nomeOvo, ovoObj)
+                    if SPAM_EGG then
+                        task.wait(DELAY_EGG)
                     else
-                        task.wait(0.5)
-                    end
-                elseif AUTO_EGG then
-                    local ovoObj, nomeOvo, dist = obterOvoMaisProximo(hrp.Position)
-                    if nomeOvo and dist <= DISTANCIA_MAX_OVO then
-                        abrirOvoCompleto(nomeOvo, ovoObj)
-                        totalOvosAbertos = totalOvosAbertos + QTD_OVOS
                         task.wait(0.3)
-                    else
-                        task.wait(0.35)
                     end
+                else
+                    task.wait(0.35)
                 end
             else
                 task.wait(1)
@@ -2007,7 +1847,7 @@ threadEgg = task.spawn(function()
         else
             task.wait(0.5)
         end
-        task.wait(0.02)
+        task.wait(0.01)
     end
 end)
 table.insert(sessao.Threads, threadEgg)
@@ -2026,7 +1866,7 @@ table.insert(sessao.Threads, threadBubble)
 
 threadRewards = task.spawn(function()
     while not sessao.Limpar do
-        if AUTO_REWARDS or AUTO_CHESTS or AUTO_MEGA_SPIN or AUTO_WORLD_REWARDS then
+        if AUTO_REWARDS or AUTO_MEGA_SPIN then
             coletarPremiosEGiros()
         end
         task.wait(15)
@@ -2034,25 +1874,42 @@ threadRewards = task.spawn(function()
 end)
 table.insert(sessao.Threads, threadRewards)
 
+local threadAntiVoid = task.spawn(function()
+    while not sessao.Limpar do
+        pcall(function()
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChild("Humanoid")
+            if hrp and hum and hum.Health > 0 then
+                -- Se o personagem cair abaixo do limite do mapa (void)
+                if hrp.Position.Y < -35 then
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    local ws = obterWorldService()
+                    local mundo = (ws and typeof(ws.GetCurrentWorld) == "function" and ws:GetCurrentWorld()) or "Overworld"
+                    viajarParaMundo(mundo)
+                end
+            end
+        end)
+        task.wait(1.5)
+    end
+end)
+table.insert(sessao.Threads, threadAntiVoid)
+
+-- ==================== DESCARREGAMENTO DE SESSÃO ====================
 function sessao.Unload()
     sessao.Limpar = true
     ATIVADO = false
     AUTO_EGG = false
-    TRAVAR_NO_OVO = false
+    SPAM_EGG = false
     AUTO_BUBBLE = false
     AUTO_REWARDS = false
     AUTO_CHESTS = false
     AUTO_MEGA_SPIN = false
-    AUTO_WORLD_REWARDS = false
     FPS_BOOST = false
     acaoEspecialAtiva = false
 
     aplicarFPSBoost(false)
-
-    if hudRefs and hudRefs.Gui then
-        pcall(function() hudRefs.Gui:Destroy() end)
-        hudRefs = nil
-    end
+    removerPlataformaSegura()
 
     if tweenAtual then
         pcall(function() tweenAtual:Cancel() end)
@@ -2086,4 +1943,4 @@ end
 
 atualizarPartesPersonagem()
 uiInicializada = true
-notificar("Script carregado", 2)
+notificar("Script atualizado com sucesso!", 2.5)
